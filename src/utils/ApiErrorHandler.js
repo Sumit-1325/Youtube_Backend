@@ -3,7 +3,6 @@ class ErrorHandler extends Error {
         super(message);
         this.statusCode = statusCode;
         this.message = message;
-        this.err = err;
         this.stack = stack;
         this.success = false;
         this.errors = errors;

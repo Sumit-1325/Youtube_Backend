@@ -26,7 +26,7 @@ const userSchema = new Schema({
         trim : true
     },
 
-    fullname: {
+    FullName: {
         type: String,
         trim : true,
         required: true,
@@ -77,7 +77,7 @@ userSchema.methods.generateAccessToken = function(){
     return jwt.sign({
         _id: this._id,
         UserName: this.UserName,
-        fullname: this.fullname,
+        FullName: this.FullName,
         Email: this.Email
     }, process.env.JWT_AccessToken_SECRET, 
     {expiresIn: process.env.JWT_AccessToken_Expires});
