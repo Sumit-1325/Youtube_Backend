@@ -33,12 +33,13 @@ const userSchema = new Schema({
         index: true
     },
 
-    avatar: {
-        type: String, //cloudinary Url 
+    Avatar: {
+        type: String ,
+        required: true, //cloudinary Url 
         trim : true
     },
     
-    coverImage: {
+    CoverImage: {
         type: String, //clodinary Url
     },
     WatchHistory : [

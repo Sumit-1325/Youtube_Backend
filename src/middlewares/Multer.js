@@ -5,15 +5,15 @@ import path from "path"
 
 
 // used to generate random file name in node
-const uniqueId = uuidv4();
+
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, '/public/temp')
+      cb(null, './public/temp')
     },
     filename: function (req, file, cb) {
         const extension = path.extname(file.originalname); // Preserve the file extension
-        const newName = `file-${uniqueId}${extension}`; // Create unique filename
+        const newName = `file-${uuidv4()}${extension}`; // Create unique filename
         cb(null, newName);
     }
   })
