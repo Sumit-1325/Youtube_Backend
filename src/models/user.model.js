@@ -48,7 +48,7 @@ const userSchema = new Schema({
             ref: "Video"
         }
     ],
-    refreshToken : {
+    RefreshToken : {
         type: String
     }
 },
@@ -58,14 +58,13 @@ const userSchema = new Schema({
 
 // Middle ware activate just Before saving the password , Storing password in hash inside database
 
-userSchema.pre("save", async function(next){
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("Password")) return next();
+    this.Password = await bcrypt.hash(this.Password, 10); 
+    
+    next();
+});
 
-    if(!this.isModified("Password")) return next();
-
-    this.Password = bcrypt.hash(this.Password, 10);
-
-next();
-})  
 
 // middle ware to decrept the password
 

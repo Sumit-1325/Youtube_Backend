@@ -26,7 +26,7 @@ const uploadResult = async(LocalPath, fileType) =>{
     } else if (fileType === 'cover') {
         folder = 'covers';
     } else if (fileType === 'video') {
-        folder = 'videos';
+        folder = 'video';
         resourceType = 'video';
     } else if(fileType === 'thumbnail'){
         folder = 'thumbnails'

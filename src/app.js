@@ -6,7 +6,7 @@ const app = express();
 app.use(cookieParser());
 
 
-//middleware to tell who can the database 
+//middleware to tell who can accesss the database 
 app.use(
     cors({
     origin:process.env.CLIENT_URL,

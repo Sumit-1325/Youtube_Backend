@@ -11,23 +11,23 @@ const videoSchema = new Schema({
         type: String, // cloudinary Url
         required: true
     },
-    title : {
+    Title : {
         type: String,
         required: true
     },
-    description : {
+    Description : {
         type: String,
         required: true
     },
-    duration : {
+    Duration : {
         type: Number,
         required: true
     },
-    views : {
+    Views : {
         type: Number,
         default: 0
     },
-    isPublished : {
+    IsPublished : {
         type: Boolean,
         default: true
     },
