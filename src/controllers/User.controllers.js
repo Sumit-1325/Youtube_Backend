@@ -4,6 +4,7 @@ import { uploadResult, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ErrorHandler } from "../utils/ApiErrorHandler.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import fs from 'fs';
+import JWT from "jsonwebtoken";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
@@ -22,54 +23,7 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
     }
 }
 
-const loginUser = asyncHandler(async (req, res, next) => {
-    // Get Data From Body 
-    let { email,UserName, Password } = req.body;
-
-    //Validation 
-    if (!email && !UserName) {
-        throw new ErrorHandler(400, "All fields are required");
-    }
-    if (!Password) {
-        throw new ErrorHandler(400, "Password is required");
-    }
-    email = email?.trim();
-    UserName = UserName?.trim();
-    Password = Password?.trim();
-
-    const user = await User.findOne({
-        $or: [{ UserName:UserName},{Email:email}]});
-    if (!user) {
-        throw new ErrorHandler(404, "User not found");
-    }
-
-    // Validate Password
-    const isPasswordMatch = await user.isPasswordMatch(Password);
-    if (!isPasswordMatch) {
-        throw new ErrorHandler(401, "Invalid Password");
-    }
-
-    // Generate Access Token and Refresh Token
-    const {AccessToken,RefreshToken} = await generateAccessTokenAndRefreshToken(user._id);
-
-    const LoggedInUser = await User.findById(user._id).select("-Password -RefreshToken");
-    if (!LoggedInUser) {
-        throw new ErrorHandler(500, "Something went wrong");
-    }
-
-    const option = {
-        httpOnly: true,
-        secure : process.env.NODE_ENV === "production",
-    }
-
-    res.status(200).cookie("AccessToken",AccessToken,option)
-    .cookie("RefreshToken",RefreshToken,option)
-    .json(new ApiResponse(200,
-       { user:LoggedInUser, AccessToken, RefreshToken},"User logged in successfully"));
-
-})
-
-const RegisterUser = asyncHandler(async (req, res, next) => {
+const RegisterUser = asyncHandler(async (req, res ) => {
     console.log(req.files);
 
     let { FullName, Email, UserName, Password } = req.body;
@@ -156,4 +110,91 @@ const RegisterUser = asyncHandler(async (req, res, next) => {
     }
 
 })
-export { RegisterUser,loginUser };
+
+const loginUser = asyncHandler(async (req, res ) => {
+    // Get Data From Body 
+    let { email,UserName, Password } = req.body;
+
+    //Validation 
+    if (!email && !UserName) {
+        throw new ErrorHandler(400, "All fields are required");
+    }
+    if (!Password) {
+        throw new ErrorHandler(400, "Password is required");
+    }
+    email = email?.trim();
+    UserName = UserName?.trim();
+    Password = Password?.trim();
+
+    const user = await User.findOne({
+        $or: [{ UserName:UserName},{Email:email}]});
+    if (!user) {
+        throw new ErrorHandler(404, "User not found");
+    }
+
+    // Validate Password
+    const isPasswordMatch = await user.isPasswordMatch(Password);
+    if (!isPasswordMatch) {
+        throw new ErrorHandler(401, "Invalid Password");
+    }
+
+    // Generate Access Token and Refresh Token
+    const {AccessToken,RefreshToken} = await generateAccessTokenAndRefreshToken(user._id);
+
+    const LoggedInUser = await User.findById(user._id).select("-Password -RefreshToken");
+    if (!LoggedInUser) {
+        throw new ErrorHandler(500, "Something went wrong");
+    }
+
+    const option = {
+        httpOnly: true,
+        secure : process.env.NODE_ENV === "production",
+    }
+
+    res.status(200).cookie("AccessToken",AccessToken,option)
+    .cookie("RefreshToken",RefreshToken,option)
+    .json(new ApiResponse(200,
+       { user:LoggedInUser, AccessToken, RefreshToken},"User logged in successfully"));
+
+})
+
+const RefreshAccessToken = asyncHandler(async (req, res) => {
+    const RefreshToken = req.cookies.RefreshToken || req.body.RefreshToken;
+    if (!RefreshToken) {
+        throw new ErrorHandler(401, "Refresh token not found");
+    }
+    const decoded_token = JWT.verify
+    (RefreshToken, process.env.JWT_SECRET); 
+    
+    // After this in User model in Refresh token we have user Id so using That to Find the user in database 
+
+   try {
+     const user = await User.findById(decoded_token?._id);
+     if (!user) {
+         throw new ErrorHandler(401, "Invalid Refresh Token");
+     }     
+     
+     if (RefreshToken !== user?.RefreshToken) {
+         throw new ErrorHandler(401, "Invalid Refresh Token");
+     }
+     const options = {
+         httpOnly: true,
+         secure : process.env.NODE_ENV === "production",
+     }
+     const AccessToken = user.generateAccessToken();
+     res.status(200).cookie("AccessToken",AccessToken,options)
+     .json(new ApiResponse(200,{AccessToken},"Access token refreshed successfully"));
+     
+
+   } catch (error) {
+     throw new ErrorHandler(500,"Something went wrong while refreshing access token");
+   }
+    });
+
+const logoutUser = asyncHandler(async (req, res) => {
+    await User.findByIdAndUpdate(
+        // ToDO: Need to come back After Middle ware video 
+    );
+})
+
+export { RegisterUser,loginUser,RefreshAccessToken };
