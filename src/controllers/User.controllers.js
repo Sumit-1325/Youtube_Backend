@@ -5,6 +5,7 @@ import { ErrorHandler } from "../utils/ApiErrorHandler.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import fs from 'fs';
 import JWT from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
@@ -305,5 +306,86 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200,user,"Cover Image updated successfully"));
 })
     
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const {UserName} = req.params
+    if(!UserName?.trim()){
+        throw new ErrorHandler(400,"Username required");
+    }
+    const channel = await User.aggregate( 
+    [
+        {
+            $match: {
+                UserName: UserName?.toLowerCase()
+            }
+        },
+        {
+            $Lookup: {
+                from: "Subscriptions",
+                localField: "_id",
+                foreignField: "Channel",
+                as: "Subscribers"  //chaneel of the user where he/she has many subscribers
+            }
+        },
+        {
+            $lookup: {
+                from: "Subscriptions",
+                localField: "_id",
+                foreignField: "Subscriber",
+                as: "Subscribed To" //Channel where user susbcribe to 
+            }
+        },
+        {
+            $addFields: {
+                SubscriptionTo_Count : {
+                    $size: "$Subscribed To" 
+                },
+                Subscribers_Count : {
+                    $size: "$Subscribers"
+                },
+                isSubscribed : {
+                    $cond: {
+                        if: {
+                            $in: [req.User?._id,"$Subscribed To.Subscriber"]
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {  //Project only Necessary data 
+            $project: {
+                UserName: 1,
+                Email:1,
+                FullName: 1,
+                Avatar: 1,
+                CoverImage: 1,
+                SubscriptionTo_Count: 1,
+                Subscribers_Count: 1,
+                isSubscribed: 1
+            }
+        }
+    ])
+    if(!channel?.length){
+        throw new ErrorHandler(404,"Channel not found");
+    }
+    
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        channel[0],
+        "Channel profile fetched successfully"
+    ));
+
+
+    const getWatchHistory = asyncHandler(async (req, res) => {
+        const user = await User.aggregate([
+            {
+                $match: {_id : new mongoose.Types.ObjectId(req.User?._id)}  
+            },
+        ]) //TODO
+
+})
 
 export { RegisterUser,loginUser,RefreshAccessToken,logoutUser,ChangeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage}  
