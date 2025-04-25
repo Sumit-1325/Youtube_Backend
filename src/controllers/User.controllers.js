@@ -377,15 +377,55 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         channel[0],
         "Channel profile fetched successfully"
     ));
+})
 
 
     const getWatchHistory = asyncHandler(async (req, res) => {
         const user = await User.aggregate([
             {
-                $match: {_id : new mongoose.Types.ObjectId(req.User?._id)}  
+                $match: { _id: new ObjectId(req.User?._id) },
             },
-        ]) //TODO
-
+            {
+                $lookup: {
+                    from: "Videos",
+                    localField: "WatchHistory",
+                    foreignField: "_id",
+                    as: "WatchHistory",
+                    pipeline: [
+                        {        
+                            $lookup:{
+                                from: "Users",
+                                localField: "Owner",
+                                foreignField: "_id",
+                                as: "Owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            UserName: 1,
+                                            FullName: 1,
+                                            Avatar: 1,
+                                        }
+                                    }
+                                ]
+                            }
+                        } ,
+                        {
+                            $addFields: {
+                                Owner: {
+                                    $first: "$Owner"
+                                }   
+                            }
+                        }
+                    ]
+                },
+            },
+        
+                
+        ])  
+        
+        return res
+        .status(200)
+        .json(new ApiResponse(200,user[0]?.WatchHistory,"Watch History Fetched Successfully"));
 })
 
-export { RegisterUser,loginUser,RefreshAccessToken,logoutUser,ChangeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage}  
+export { RegisterUser,loginUser,RefreshAccessToken,logoutUser,ChangeCurrentPassword,getCurrentUser,updateAccountDetails,updateUserAvatar,updateUserCoverImage,getUserChannelProfile,getWatchHistory }
