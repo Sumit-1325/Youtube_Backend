@@ -54,12 +54,29 @@ const uploadResult = async(LocalPath, fileType) =>{
         
     }}
 
-const deleteFromCloudinary = async (publicId) => {
-    try {
-        const result = await cloudinary.uploader.destroy(publicId);
-        console.log("File deleted from cloudinary.publicId:",publicId);
-        return result
+    const deleteFromCloudinary = async function (publicid,fileType = 'image') {
+        console.log("public ",publicid);
         
+        const publicId = extractPublicId(publicid);
+        try{
+            if(!publicId){
+                console.log("File not found"); //to be removed after adding logs logger
+                return null
+            }
+            
+            let deleteResponse;
+            if (fileType === 'video') {
+                deleteResponse = await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+            } else {
+                deleteResponse = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+            }
+    
+            if (deleteResponse.result === "ok") {
+                console.log("File deleted from Cloudinary. File Src : " + publicId); // to be removed after adding logs logger
+            } else {
+                console.log("Failed to delete file from Cloudinary. File Src : " + publicId); //to be removed after adding logs logger
+            } 
+            return deleteResponse
     } catch (error) {
         console.log("Error while deleting from cloudinary",error)
         return null
@@ -67,5 +84,15 @@ const deleteFromCloudinary = async (publicId) => {
     }
     
 }    
+
+
+const extractPublicId = (url) => {
+    const parts = url.split('/');
+    const publicIdWithExtension = parts.slice(-2).join('/');
+    const publicId = publicIdWithExtension.split('.')[0]; // Remove the file extension
+    console.log("publicId",publicId);
+    
+    return publicId;
+}
 
 export {uploadResult,deleteFromCloudinary} 

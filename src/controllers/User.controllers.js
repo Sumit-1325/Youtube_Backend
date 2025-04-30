@@ -239,6 +239,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
     const {FullName,Email} = req.body;
+    console.log(FullName,Email);
     if(!FullName || !Email){
         throw new ErrorHandler(400,"FullName Or Email required");
     }
@@ -250,23 +251,27 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         },
     },
         {new: true}
-    ).select("-Password","-RefreshToken");
+    ).select("-Password -RefreshToken");
     return res
     .status(200)
     .json(new ApiResponse(200,user,"Account details updated successfully"));    
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+    const currentUser = await User.findById(req.User?._id);
     const LocalPath = req.file.path;
     if (!LocalPath) {
         throw new ErrorHandler(400,"Avatar required For Update");
     }
-
+    const Old_Avatar = currentUser.Avatar;
     const result = await uploadResult(LocalPath,"avatar");
 
     if (!result.url) {
         throw new ErrorHandler(500,"Something went wrong while updating avatar");
     }
+    const temp = await deleteFromCloudinary(Old_Avatar,"image");
+    console.log(temp);
+    
 
     const user = await User.findByIdAndUpdate(req.User?._id,
         {
@@ -275,14 +280,14 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         },
     },
         {new: true}
-    ).select("-Password","-RefreshToken");
+    ).select("-Password -RefreshToken");
     return res
     .status(200)
     .json(new ApiResponse(200,user,"Avatar updated successfully"));
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    Localcoverpath = req.file.path;
+    const Localcoverpath = req.file.path;
     if (!Localcoverpath) {
         throw new ErrorHandler(400,"Cover Image required For Update");
     }
@@ -300,7 +305,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         },
     },
         {new: true}
-    ).select("-Password","-RefreshToken");
+    ).select("-Password -RefreshToken");
     return res
     .status(200)
     .json(new ApiResponse(200,user,"Cover Image updated successfully"));
@@ -319,8 +324,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             }
         },
         {
-            $Lookup: {
-                from: "Subscriptions",
+            $lookup: {
+                from: "subscriptions",
                 localField: "_id",
                 foreignField: "Channel",
                 as: "Subscribers"  //chaneel of the user where he/she has many subscribers
@@ -328,7 +333,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
-                from: "Subscriptions",
+                from: "subscriptions",
                 localField: "_id",
                 foreignField: "Subscriber",
                 as: "Subscribed To" //Channel where user susbcribe to 
@@ -383,7 +388,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const getWatchHistory = asyncHandler(async (req, res) => {
         const user = await User.aggregate([
             {
-                $match: { _id: new ObjectId(req.User?._id) },
+                $match: { _id: req.User?._id },
             },
             {
                 $lookup: {
