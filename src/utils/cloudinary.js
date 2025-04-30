@@ -46,6 +46,7 @@ const uploadResult = async(LocalPath, fileType) =>{
         // Once the  file is uploaded, delete the local file
         console.log("File deleted from local path:",LocalPath);
         fs.unlinkSync(LocalPath);
+        console.log(result);
         return result
     } catch (error) {
         console.log("Error while deleting from LocalDirectory",error)

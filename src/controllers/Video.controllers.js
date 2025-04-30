@@ -2,7 +2,6 @@ import { asyncHandler } from "../utils/AsyncHandler.js";
 // import {User} from "../models/user.model.js";
 import { ErrorHandler } from "../utils/ApiErrorHandler.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
-import fs from 'fs';
 import { Video } from "../models/video.model.js";
 import { uploadResult, deleteFromCloudinary } from "../utils/cloudinary.js";
 
@@ -15,50 +14,60 @@ const Get_All_Videos = asyncHandler(async (req, res, next) => {
 })
 
 // upload video and Upload video in cloudinary 
-const Upload_Video =  asyncHandler(async (req, res, next) => {
-    let {Title, Description } = req.body
-    const UserDetails = req.User
+const Upload_Video = asyncHandler(async (req, res, next) => {
+    let { Title, Description } = req.body;
+    const UserDetails = req.User;
+
     if (!Title) {
-        throw new ErrorHandler(400, "Tittle Required"); 
+        throw new ErrorHandler(400, "Title Required");
     }
+
     Title = Title.trim();
     Description = Description?.trim();
-    const VideoFile = req.files?.Video[0]?.path;
-    const Thumbnail = req.files?.Thumbnail[0]?.path;
-    if (!VideoFile) {
-        throw new ErrorHandler(400, "Video File Required"); 
+
+    // Get local file paths
+    const localVideoPath = req.files?.Video?.[0]?.path;
+    const localThumbnailPath = req.files?.Thumbnail?.[0]?.path;
+
+    if (!localVideoPath) {
+        throw new ErrorHandler(400, "Video File Required");
     }
-    if (!Thumbnail) {
+    if (!localThumbnailPath) {
         throw new ErrorHandler(400, "Thumbnail File Required");
     }
 
-    // UPload Files on cloudinary
+    let uploadedVideo = null;
+    let uploadedThumbnail = null;
     try {
-        VideoFile= await uploadResult(VideoFile,"video");
-        console.log("Video uploaded",VideoFile);
-        Thumbnail = await uploadResult(Thumbnail,"thumbnail");
+        // Upload to cloud
+        uploadedVideo = await uploadResult(localVideoPath, "video");
+        console.log("uploadedVideo",uploadedVideo.url);
         
-        // create video 
-        // Need To Check 
+        uploadedThumbnail = await uploadResult(localThumbnailPath, "thumbnail");
+
+        // Ensure upload returned URLs
+        if (!uploadedVideo?.url || !uploadedThumbnail?.url) {
+            throw new ErrorHandler(500, "Cloudinary upload failed");
+        }
+
+        // Save to DB
         const video = await Video.create({
-            Title : Title,
-            Description : Description,
-            VideoFile : VideoFile?.url,
-            Thumbnail : Thumbnail?.url,
-            Owner:UserDetails._id
+            Title,
+            Description,
+            VideoFile: uploadedVideo.url,
+            Thumbnail: uploadedThumbnail.url,
+            Owner: UserDetails._id
         });
-        return res.status(200).json(new ApiResponse(200, "success", {video}));
-        
+        return res.status(200).json(new ApiResponse(200, "success", { video }));
     } catch (error) {
-        if (!VideoFile) {
-            throw new ErrorHandler(500,"Failed To upload VideoFile to Clodinary");
-        }
-        if(!Thumbnail){       
-            throw new ErrorHandler(500,"Failed To Upload Thumbnail to Clodinary");
-        }
-        
+        console.error("Upload error:", error);
+        if(uploadedVideo) await deleteFromCloudinary(uploadedVideo.url,"video");
+        if(uploadedThumbnail) await deleteFromCloudinary(uploadedThumbnail.url,"thumbnail");
+        throw new ErrorHandler(500, "Failed to upload video or thumbnail");
     }
-})
+});
+
+
 
 // searching By Video Id
 const Search_Video_By_Id = asyncHandler(async (req, res, next) => {

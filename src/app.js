@@ -22,10 +22,11 @@ app.use(express.static("public"));
 import HealthChek from "./routes/HealthCheck.route.js";
 import UserRouter from "./routes/User.route.js";
 import {errorMiddleware} from "./middlewares/error.middleware.js";
-
+import VideoRoute from "./routes/Video.route.js";
 //routes
 app.use("/api/v1/healthCheck", HealthChek);
 app.use("/api/v1/Users", UserRouter);
+app.use("/api/v1/Videos", VideoRoute);
 
 
 app.use(errorMiddleware);
