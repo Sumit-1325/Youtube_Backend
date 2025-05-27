@@ -14,7 +14,7 @@ const Create_Playlist = asyncHandler(async (req, res) => {
 
   const { name, Description, VideoId } = req.body;
 
-  console.log("Request Body:", req.body); // Debugging request body
+  console.log("Request Body:", req.body);
 
   if (!name) {
     throw new ErrorHandler(400, "Playlist name is required");
@@ -33,18 +33,20 @@ const Create_Playlist = asyncHandler(async (req, res) => {
     throw new ErrorHandler(400, "Invalid Video ID format");
   }
 
+  console.log("Video ID is valid");
+
   try {
     const newPlaylist = await Playlist.create({
       name,
-      Description,
-      videos: [new mongoose.Types.ObjectId(VideoId)],
+      Description, // must match the schema (case-sensitive)
+      videos: [ new mongoose.Types.ObjectId(VideoId)],
       owner: user._id,
     });
-
     return res
       .status(201)
       .json(new ApiResponse(201, "Playlist created successfully", { newPlaylist }));
   } catch (error) {
+    console.error("Error in creating playlist:", error);
     throw new ErrorHandler(500, "Error creating playlist");
   }
 });
@@ -94,15 +96,33 @@ const updatedPlayList = await Playlist.findByIdAndUpdate(PlayListId,{$addToSet:{
 // Edit Playlist
 const Edit_Playlist = asyncHandler(async (req, res) => {
     const playlistId = req.body.PlaylistId;
+    console.log(playlistId);
     const playlist = await Playlist.findById(playlistId);
     if(!playlist){
         throw new ErrorHandler(404,"Playlist Not Found");
     }
+    console.log(playlist);
     playlist.name = req.body.name;
     playlist.Description = req.body.Description;
     await playlist.save();
     return res.status(200).json(new ApiResponse(200, "success", {playlist}));
 })
 
+const Delete_Playlist = asyncHandler(async (req, res) => {
+  const playlistId = req.body.PlaylistId;
 
-export {Get_All_Playlists , Create_Playlist , Add_Videos_To_Playlist , Edit_Playlist}
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ErrorHandler(404, "Playlist Not Found");
+  }
+
+  await playlist.deleteOne(); // 🔥 correct method for deleting document
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Playlist deleted successfully", { playlist }));
+});
+
+
+
+export {Get_All_Playlists , Create_Playlist , Add_Videos_To_Playlist , Edit_Playlist,Delete_Playlist}
